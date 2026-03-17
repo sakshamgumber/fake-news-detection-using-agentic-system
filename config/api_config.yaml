@@ -11,6 +11,13 @@ llm:
     temperature: 0.3  # Lower for factual tasks
     max_tokens: 2048
 
+  # Gemini provider config
+  gemini_provider:
+    primary_provider: "gemini"
+    model: "gemini-2.0-flash"
+    temperature: 0.3
+    max_tokens: 2048
+
   # Fallback/Optional (Paid) LLM - OpenAI
   fallback_provider: "openai"  # Set to null to disable
   openai:
@@ -20,11 +27,19 @@ llm:
     temperature: 0.3
     max_tokens: 2048
 
+  # Groq provider config
+  groq:
+    api_key: "${GROQ_API_KEY}"
+    model: "openai/gpt-oss-120b"
+    timeout: 60
+    temperature: 0.3
+    max_tokens: 2048
+
   # Content Analysis LLM (Optional)
   content_analysis_provider: "ollama"  # or "gemini"
   gemini:
     api_key: "${GEMINI_API_KEY}"
-    model: "gemini-1.5-flash"
+    model: "gemini-2.0-flash"
     timeout: 45
     temperature: 0.2
 

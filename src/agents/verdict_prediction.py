@@ -123,7 +123,7 @@ class VerdictPredictionAgent:
 
         # Generate verdict
         prompt = self.prompt_template.format(claim=original_claim, cell=cell)
-        response = self.llm._generate_ollama(prompt)
+        response = self.llm._generate_groq(prompt,model="openai/gpt-oss-120b")
         logger.debug(f"verdiction agent prompt is this : {response}")
 
             # Parse JSON

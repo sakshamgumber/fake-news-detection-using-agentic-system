@@ -88,7 +88,7 @@ def run_demo(num_claims: int = 10):
             ground_truth=ground_truth,
         )
 
-        results.append(result)
+        results.append(result.get('verdict', {}).get('final_verdict', 'ERROR'))
 
         # Show verdict
         verdict = result.get('verdict', {})
@@ -102,37 +102,10 @@ def run_demo(num_claims: int = 10):
     logger.info("CALCULATING EVALUATION METRICS")
     logger.info("="*80)
 
-    comprehensive_metrics = MetricsCalculator.calculate_comprehensive_metrics(results, dataset)
 
-    # Display metrics
-    metrics_report = MetricsCalculator.format_metrics_report(comprehensive_metrics)
-    print("\n" + metrics_report)
-
-    # Get performance analysis from RL agent
-    logger.info("\n" + "="*80)
-    logger.info("REINFORCEMENT LEARNING ANALYSIS")
-    logger.info("="*80)
-
-    rl_analysis = orchestrator.get_performance_analysis()
-
-    logger.info(f"\nPerformance Score: {rl_analysis['performance_score']:.4f}")
-
-    logger.info("\nPatterns Detected:")
-    patterns = rl_analysis.get('patterns', {})
-    if 'accuracy_trend' in patterns:
-        acc_trend = patterns['accuracy_trend']
-        logger.info(f"  Accuracy: mean={acc_trend['mean']:.4f}, recent={acc_trend['recent_mean']:.4f}")
-
-    if 'evidence_quality_trend' in patterns:
-        qual_trend = patterns['evidence_quality_trend']
-        logger.info(f"  Evidence Quality: mean={qual_trend['mean']:.4f}")
-
-    logger.info("\nSuggestions for Improvement:")
-    for i, suggestion in enumerate(rl_analysis.get('suggestions', []), 1):
-        logger.info(f"  {i}. {suggestion}")
-
-    # Save detailed observations to file
-    save_observations(results, dataset, comprehensive_metrics, rl_analysis)
+    ground_truths = [d['ground_truth'] for d in dataset]
+    comprehensive_metrics = MetricsCalculator.calculate_classification_metrics(results, ground_truths)
+    logger.info(f"Calculated comprehensive metrics: {comprehensive_metrics}")
 
     logger.info("\n" + "="*80)
     logger.info(f"DEMO COMPLETE - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -162,7 +135,6 @@ def save_observations(results, dataset, metrics, rl_analysis):
         f.write("---\n\n")
         f.write("## Detailed Evaluation Metrics\n\n")
         f.write("```\n")
-        f.write(MetricsCalculator.format_metrics_report(metrics))
         f.write("\n```\n\n")
 
         # Claim-by-claim results

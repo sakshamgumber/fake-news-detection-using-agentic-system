@@ -12,6 +12,10 @@ from pathlib import Path
 from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential
 import json
+from dotenv import load_dotenv
+
+# Load .env file so API keys are available via os.environ
+load_dotenv()
 
 
 class LLMProvider(Enum):
@@ -19,6 +23,7 @@ class LLMProvider(Enum):
     OLLAMA = "ollama"
     OPENAI = "openai"
     GEMINI = "gemini"
+    GROQ = "groq"
 
 
 class LLMInterface:
@@ -44,6 +49,7 @@ class LLMInterface:
         self.ollama_client = None
         self.openai_client = None
         self.gemini_client = None
+        self.groq_client = None
 
         self._setup_providers()
 
@@ -86,6 +92,18 @@ class LLMInterface:
                     'timeout': 60,
                     'temperature': 0.3,
                     'max_tokens': 2048
+                },
+                'groq': {
+                    'model': 'openai/gpt-oss-120b',
+                    'timeout': 60,
+                    'temperature': 0.3,
+                    'max_tokens': 2048
+                },
+                'gemini': {
+                    'model': 'gemini-2.0-flash',
+                    'timeout': 60,
+                    'temperature': 0.3,
+                    'max_tokens': 2048
                 }
             }
         }
@@ -108,23 +126,30 @@ class LLMInterface:
     def _setup_providers(self):
         """Initialize LLM provider clients"""
         llm_config = self.config.get('llm', {})
+        primary_provider = llm_config.get('primary_provider')
+        fallback_provider = llm_config.get('fallback_provider')
 
-        # Setup Ollama (free, primary)
-        if llm_config.get('primary_provider') == 'ollama':
-            self._setup_ollama()
-
-        # Setup OpenAI (paid, fallback)
-        if llm_config.get('fallback_provider') == 'openai':
-            self._setup_openai()
+        # Always setup Ollama, Gemini, and Groq since agents use them directly
+        self._setup_ollama()
+        self._setup_gemini()
+        self._setup_groq()
 
     def _setup_ollama(self):
-        """Initialize Ollama client"""
+        """Initialize Ollama client using OpenAI API"""
         try:
-            import ollama
-            self.ollama_client = ollama
-            logger.info("Ollama client initialized successfully")
+            from openai import OpenAI
+            
+            base_url = self.config.get('llm', {}).get('ollama', {}).get('base_url', 'http://localhost:11434')
+            if not base_url.endswith('/v1'):
+                base_url = f"{base_url.rstrip('/')}/v1"
+                
+            self.ollama_client = OpenAI(
+                base_url=base_url,
+                api_key="ollama",  # API key is required by the client but unused by local Ollama
+            )
+            logger.info("Ollama client initialized successfully via OpenAI API")
         except ImportError:
-            logger.warning("Ollama package not installed. Install with: pip install ollama")
+            logger.warning("OpenAI package not installed. Install with: pip install openai")
         except Exception as e:
             logger.error(f"Failed to initialize Ollama: {e}")
 
@@ -143,6 +168,45 @@ class LLMInterface:
             logger.warning("OpenAI package not installed. Install with: pip install openai")
         except Exception as e:
             logger.error(f"Failed to initialize OpenAI: {e}")
+
+    def _setup_groq(self):
+        """Initialize Groq client"""
+        try:
+            from openai import OpenAI
+
+            api_key = os.environ.get("GROQ_API_KEY")
+            if api_key:
+                self.groq_client = OpenAI(
+                    api_key=api_key,
+                    base_url="https://api.groq.com/openai/v1",
+                )
+                logger.info("Groq client initialized successfully")
+            else:
+                logger.warning("GROQ_API_KEY not found in environment variables")
+        except ImportError:
+            logger.warning("OpenAI package not installed. Install with: pip install openai")
+        except Exception as e:
+            logger.error(f"Failed to initialize Groq: {e}")
+
+    def _setup_gemini(self):
+        """Initialize Google Gemini client via OpenAI-compatible API"""
+        try:
+            from openai import OpenAI
+
+            api_key = os.environ.get("GEMINI_API_KEY")
+            logger.info(f"Gemini API key: {api_key}")
+            if api_key:
+                self.gemini_client = OpenAI(
+                    api_key=api_key,
+                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                )
+                logger.info("Gemini client initialized successfully")
+            else:
+                logger.warning("GEMINI_API_KEY not found in environment variables")
+        except ImportError:
+            logger.warning("OpenAI package not installed. Install with: pip install openai")
+        except Exception as e:
+            logger.error(f"Failed to initialize Gemini: {e}")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def generate(
@@ -186,6 +250,10 @@ class LLMInterface:
                     return self._generate_ollama(prompt, max_tokens)
                 elif prov_name == 'openai' and self.openai_client:
                     return self._generate_openai(prompt, max_tokens)
+                elif prov_name == 'groq' and self.groq_client:
+                    return self._generate_groq(prompt, max_tokens)
+                elif prov_name == 'gemini' and self.gemini_client:
+                    return self._generate_gemini(prompt, max_tokens)
             except Exception as e:
                 logger.warning(f"{prov_name} generation failed: {e}")
                 last_error = e
@@ -197,30 +265,28 @@ class LLMInterface:
     def _generate_ollama(
         self,
         prompt: str,
+        model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         role: str = 'user'
     ) -> str:
-        """Generate text using Ollama"""
+        """Generate text using Ollama via OpenAI API"""
         ollama_config = self.config['llm']['ollama']
 
-        messages = [{'role':role, 'content': prompt}]
+        messages = [{'role': role, 'content': prompt}]
 
-        options = {
-            'temperature': temperature or ollama_config.get('temperature', 0.3),
-            'num_predict': max_tokens or ollama_config.get('max_tokens', 2048)
-        }
-
-        response = self.ollama_client.chat(
-            model=ollama_config['model'],
+        response = self.ollama_client.chat.completions.create(
+            model=model or ollama_config.get('model', 'llama3.2:3b'),
             messages=messages,
-            options=options
+            temperature=temperature or ollama_config.get('temperature', 0.3),
+            max_tokens=max_tokens or ollama_config.get('max_tokens', 2048)
         )
-        return response.message.content
+        return response.choices[0].message.content
 
     def _generate_openai(
         self,
         prompt: str,
+        model: Optional[str] = None,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
         role: str = 'user'
@@ -231,7 +297,7 @@ class LLMInterface:
         messages = [{'role': role, 'content': prompt}]
 
         response = self.openai_client.chat.completions.create(
-            model=openai_config['model'],
+            model=model or openai_config.get('model', 'gpt-4o-mini'),
             messages=messages,
             temperature=temperature or openai_config.get('temperature', 0.3),
             max_tokens=max_tokens or openai_config.get('max_tokens', 2048)
@@ -239,51 +305,51 @@ class LLMInterface:
 
         return response.choices[0].message.content
 
-    def generate_structured(
+    def _generate_groq(
         self,
         prompt: str,
-        output_schema: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """
-        Generate structured JSON output matching a schema.
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        role: str = 'user'
+    ) -> str:
+        """Generate text using Groq"""
+        groq_config = self.config['llm']['groq']
 
-        Args:
-            prompt: User prompt
-            output_schema: Expected JSON schema
+        messages = [{'role': role, 'content': prompt}]
 
-        Returns:
-            Parsed JSON matching schema
-        """
-        schema_str = json.dumps(output_schema, indent=2)
+        response = self.groq_client.chat.completions.create(
+            model=model or groq_config.get('model', 'openai/gpt-oss-120b'),
+            messages=messages,
+            temperature=temperature or groq_config.get('temperature', 0.3),
+            max_tokens=max_tokens or groq_config.get('max_tokens', 2048)
+        )
 
-        full_prompt = f"""{prompt}
+        return response.choices[0].message.content
 
-Please respond with ONLY a valid JSON object matching this schema:
-{schema_str}
+    def _generate_gemini(
+        self,
+        prompt: str,
+        model: Optional[str] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        role: str = 'user'
+    ) -> str:
+        """Generate text using Google Gemini via OpenAI API"""
+        gemini_config = self.config['llm'].get('gemini', {})
 
-Do not include any explanation, just the JSON."""
+        messages = [{'role': role, 'content': prompt}]
 
-        response = self.generate(full_prompt)
+        response = self.gemini_client.chat.completions.create(
+            model=model or gemini_config.get('model', 'gemini-2.0-flash'),
+            messages=messages,
+            temperature=temperature or gemini_config.get('temperature', 0.3),
+            max_tokens=max_tokens or gemini_config.get('max_tokens', 2048)
+        )
 
-        # Extract JSON from response
-        try:
-            # Try direct parsing
-            return json.loads(response)
-        except json.JSONDecodeError:
-            # Try extracting JSON from markdown code blocks
-            import re
-            json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
-            if json_match:
-                return json.loads(json_match.group(1))
+        return response.choices[0].message.content
 
-            # Try extracting any JSON object
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if json_match:
-                return json.loads(json_match.group(0))
-
-            raise ValueError(f"Could not parse JSON from response: {response}")
-
-
+    
 # Convenience function for quick usage
 def get_llm() -> LLMInterface:
     """Get configured LLM interface singleton"""
