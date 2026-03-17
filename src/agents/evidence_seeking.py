@@ -107,8 +107,7 @@ class EvidenceSeekingAgent:
                             query=query,
                             content=content_text
                         )
-                        extracted = self.llm._generate_ollama(prompt)
-
+                        extracted = self.llm._generate_groq(prompt=prompt)
                         if extracted and "None" not in extracted:
                             passages = [extracted]
 

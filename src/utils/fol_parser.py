@@ -46,7 +46,7 @@ class FOLParser:
         prompt = self.prompts.get('claim_decomposition', '').format(claim=claim)
 
         try:
-            response_text = self.llm._generate_ollama(prompt=prompt)
+            response_text = self.llm._generate_groq(prompt=prompt)
 
             # Parse JSON safely (handles empty, markdown-fenced, or malformed responses)
             logger.info(type(response_text))
@@ -69,7 +69,7 @@ class FOLParser:
         """Classify a subclaim as VERIFIABLE or NON-VERIFIABLE"""
         prompt = self.prompts.get('subclaim_classification', '').format(claim=subclaim)
         try:
-            response_text = self.llm._generate_ollama(prompt=prompt)
+            response_text = self.llm._generate_groq(prompt=prompt)
             json_response = json.loads(response_text)
 
             return json_response

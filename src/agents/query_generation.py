@@ -107,7 +107,7 @@ class QueryGenerationAgent:
         """
         prompt_template = self.prompts.get('query_generation', '')
         system_prompt = prompt_template.format(k=k, subclaim=subclaim)
-        response = self.llm._generate_ollama(
+        response = self.llm._generate_groq(
             role="user",
             prompt=system_prompt,
         )
