@@ -12,7 +12,7 @@
 ## 👥 Authors & Credits
 
 **Developed by:**
-- **Siddharth Chauhan**
+- **sakshamgumber**
 - **Saksham Gumber**
 
 **Under the guidance of:**
@@ -174,7 +174,7 @@ Tested on academic benchmarks:
 
 ```bash
 # 1. Clone this repository
-git clone https://github.com/SIDDHARTH1-1CHAUHAN/Research_Paper01.git
+git clone https://github.com/sakshamgumber/fake-news-detection-using-agentic-system.git
 cd Research_Paper01/multi-agent-fact-checker
 
 # 2. Create virtual environment
@@ -562,7 +562,7 @@ MIT License - see [LICENSE](LICENSE) file
 
 ## Support & Contact
 
-- **Issues:** [GitHub Issues](https://github.com/SIDDHARTH1-1CHAUHAN/Research_Paper01/issues)
+- **Issues:** [GitHub Issues](https://github.com/sakshamgumber/fake-news-detection-using-agentic-system/issues)
 - **Documentation:** [Full Documentation](docs/)
 - **Research Paper:** [docs/RESEARCH_PAPER.md](docs/RESEARCH_PAPER.md)
 

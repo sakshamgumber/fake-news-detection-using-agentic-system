@@ -127,7 +127,7 @@ Static files will be in `out/` directory.
 A: "Yes, it works on desktop, tablet, and mobile. It also has automatic dark mode support."
 
 **Q: "Can I access this later?"**
-A: "Yes, it's on GitHub at https://github.com/SIDDHARTH1-1CHAUHAN/Research_Paper01. You can clone it and run it anytime. I can also deploy it to a live URL if you'd like."
+A: "Yes, it's on GitHub at https://github.com/sakshamgumber/fake-news-detection-using-agentic-system. You can clone it and run it anytime. I can also deploy it to a live URL if you'd like."
 
 **Q: "What framework did you use?"**
 A: "Next.js 14 with TypeScript and Tailwind CSS for styling. The charts are built with Recharts for interactive visualizations."

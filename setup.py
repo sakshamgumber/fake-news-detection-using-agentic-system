@@ -19,7 +19,7 @@ setup(
     description="A multi-agent system for automated fact-checking with explainable AI",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/SIDDHARTH1-1CHAUHAN/Research_Paper01",
+    url="https://github.com/sakshamgumber/fake-news-detection-using-agentic-system",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[

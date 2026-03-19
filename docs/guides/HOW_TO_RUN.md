@@ -357,7 +357,7 @@ A: "It implements and extends the architecture from Trinh et al. (2025). Our con
 ## Next Steps After Demo
 
 1. **Show the GitHub repository:**
-   - https://github.com/SIDDHARTH1-1CHAUHAN/Research_Paper01
+   - https://github.com/sakshamgumber/fake-news-detection-using-agentic-system
 
 2. **Point to documentation:**
    - `README.md` - For everyone

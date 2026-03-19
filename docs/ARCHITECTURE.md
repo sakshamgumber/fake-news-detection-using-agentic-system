@@ -667,5 +667,5 @@ Tracked in `src/storage/performance_tracker.py`:
 ## Contact & Support
 
 For technical questions or contributions:
-- GitHub Issues: https://github.com/SIDDHARTH1-1CHAUHAN/Research_Paper01/issues
+- GitHub Issues: https://github.com/sakshamgumber/fake-news-detection-using-agentic-system/issues
 - Documentation: See README.md and RESEARCH_PAPER.md

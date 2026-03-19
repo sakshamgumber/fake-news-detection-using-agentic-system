@@ -42,7 +42,7 @@ Key principles:
 
 ### Before You Start
 
-1. Check existing [issues](https://github.com/SIDDHARTH1-1CHAUHAN/Research_Paper01/issues) to avoid duplicates
+1. Check existing [issues](https://github.com/sakshamgumber/fake-news-detection-using-agentic-system/issues) to avoid duplicates
 2. For major changes, open an issue first to discuss your proposal
 3. Fork the repository and create a feature branch
 4. Follow the coding standards and testing guidelines
@@ -415,8 +415,8 @@ Include:
 
 ## Getting Help
 
-- **Questions:** Open a [GitHub Discussion](https://github.com/SIDDHARTH1-1CHAUHAN/Research_Paper01/discussions)
-- **Bugs:** Open an [Issue](https://github.com/SIDDHARTH1-1CHAUHAN/Research_Paper01/issues)
+- **Questions:** Open a [GitHub Discussion](https://github.com/sakshamgumber/fake-news-detection-using-agentic-system/discussions)
+- **Bugs:** Open an [Issue](https://github.com/sakshamgumber/fake-news-detection-using-agentic-system/issues)
 - **Security:** Email maintainers directly (see README for contact)
 
 ---
