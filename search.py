@@ -1,77 +1,115 @@
-from langsearch import Client
+import requests
+import sys
 
-# You need to install the langsearch client first:
-# pip install langsearch
 
-# It's recommended to set the API key as an environment variable
-# LANGSEARCH_API_KEY="..."
-# client = Client()
-# For this example, we will hardcode it.
-# Please replace "YOUR_LANGSEARCH_API_KEY" with your actual key.
-client = Client(api_key="sk-8ef39cbed62941f7a0af9dcb67c09752")
+API_KEY = "sk-8ef39cbed62941f7a0af9dcb67c09752"
 
-def search_and_rerank_wikipedia_with_langsearch(query: str, limit: int = 10):
+def langsearch_wikipedia(query: str, num_results: int = 10):
     """
-    Searches Wikipedia for a given query using LangSearch, retrieves the top results,
-    and then uses the rerank API to identify the best result.
-
-    Args:
-        query (str): The search query.
-        limit (int): The number of results to retrieve.
-
-    Returns:
-        dict: The best reranked result, or an error message.
+    Perform a hybrid search restricted to Wikipedia in English.
     """
+    url = "https://api.langsearch.com/v1/web-search"
+
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "query": query,
+        "num_results": num_results,
+        "summary": False, # Only need results for reranking and final URL output
+
+        # ✅ Hybrid search: combines semantic (vector) + keyword (BM25) search
+        "search_type": "hybrid",
+        "semantic_weight": 0.5,
+        "keyword_weight": 0.5,
+
+        # ✅ Restrict to Wikipedia domain only
+        "include_domains": ["wikipedia.org"],
+
+        # ✅ English results only
+        "language": "en",
+        "country": "US"
+    }
+
     try:
-        # Step 1: Search Wikipedia using LangSearch
-        # Add "site:en.wikipedia.org" to focus the search on Wikipedia
-        search_query = f"{query} site:en.wikipedia.org"
-        print(f"Performing search with LangSearch query: '{search_query}'")
-        
-        search_results = client.search(
-            query=search_query,
-            limit=limit
-        )
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        print(response.json())
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Search API Error: {e}")
+        return {}
 
-        if not search_results or not search_results.get('results'):
-            return {"error": "No search results found."}
+def rerank_results(query: str, search_results: list):
+    """
+    Rerank search results using the LangSearch Reranker API.
+    """
+    if not search_results:
+        return []
 
-        print(f"Found {len(search_results['results'])} results.")
-        
-        # Extract documents for reranking
-        documents_to_rerank = search_results['results']
+    url = "https://api.langsearch.com/v1/rerank"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
 
-        if not documents_to_rerank:
-            return {"error": "No documents found in search results to rerank."}
+    # Extract snippets to provide context for the reranker
+    documents = [res.get("snippet", "") for res in search_results if res.get("snippet")]
+    
+    if not documents:
+        return search_results
 
-        print("Reranking documents...")
-        rerank_results = client.rerank(
-            query=query,
-            documents=documents_to_rerank,
-        )
+    payload = {
+        "model": "langsearch-reranker-v1",
+        "query": query,
+        "documents": documents,
+        "top_n": len(documents)
+    }
 
-        if not rerank_results or not rerank_results.get('results'):
-            return {"error": "Reranking did not return any results."}
-            
-        # The best result is the first one in the reranked list
-        best_result = rerank_results['results'][0]
-        
-        return best_result
-
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        print(response.json())
+        response.raise_for_status()
+        reranked_data = response.json()
+        # Mapping reranked indices back to original results
+        indices = [item["index"] for item in reranked_data.get("results", [])]
+        return [search_results[i] for i in indices]
     except Exception as e:
-        return {"error": str(e)}
+        print(f"⚠️ Reranking failed: {e}. Falling back to original results.")
+        return search_results
+
+def main():
+    # Use command line argument if provided, otherwise use default query
+    if len(sys.argv) > 1:
+        query = " ".join(sys.argv[1:])
+    else:
+        query = "which is the highest peak of world"
+
+    print(f"\n🔎 Searching Wikipedia (Hybrid) for: '{query}'...")
+    
+    # 1. Initial Search
+    data = langsearch_wikipedia(query=query, num_results=10)
+    results = data.get("results", [])
+
+    if not results:
+        print("⚠️ No results found.")
+        return
+
+    # 2. Rerank for best relevance
+    print("🔄 Reranking results for optimal accuracy...")
+    reranked_results = rerank_results(query, results)
+
+    # 3. Output only URLs
+    print(f"\n✅ Top Reranked Wikipedia URLs for result:\n")
+    for i, item in enumerate(reranked_results, start=1):
+        url = item.get("url")
+        if url:
+            print(f"{i}. {url}")
+    print("\n" + "=" * 60)
 
 if __name__ == "__main__":
-    search_query = "AI agent frameworks"
-    
-    # Perform the search and rerank
-    best_url_info = search_and_rerank_wikipedia_with_langsearch(search_query)
+    main()
 
-    if "error" in best_url_info:
-        print(f"An error occurred: {best_url_info['error']}")
-    else:
-        print("\n--- Best Reranked Result (LangSearch) ---")
-        print(f"URL: {best_url_info.get('url')}")
-        print(f"Score: {best_url_info.get('score')}")
-        print(f"Title: {best_url_info.get('title')}")
-        print(f"Content Snippet: {best_url_info.get('snippet', 'N/A')}")
+
