@@ -14,8 +14,6 @@ from src.agents.input_ingestion import InputIngestionAgent
 from src.agents.query_generation import QueryGenerationAgent
 from src.agents.evidence_seeking import EvidenceSeekingAgent
 from src.agents.verdict_prediction import VerdictPredictionAgent
-from src.agents.explainable_ai import ExplainableAIAgent
-from src.agents.reinforcement_learning import ReinforcementLearningAgent
 from src.utils.llm_interface import LLMInterface
 
 
@@ -64,20 +62,13 @@ class FactCheckingOrchestrator:
         )
 
         self.evidence_seeking = EvidenceSeekingAgent(
-            config=self.config.get('evidence_seeking', {})
+            config=self.config.get('evidence_seeking', {}),
+            llm_interface=self.llm
         )
 
         self.verdict_prediction = VerdictPredictionAgent(
             config=self.config.get('verdict_prediction', {}),
             llm_interface=self.llm
-        )
-
-        self.explainable_ai = ExplainableAIAgent(
-            config=self.config.get('explainable_ai', {})
-        )
-
-        self.reinforcement_learning = ReinforcementLearningAgent(
-            config=self.config.get('reinforcement_learning', {})
         )
 
         logger.info("✓ All agents initialized successfully")
@@ -110,8 +101,6 @@ class FactCheckingOrchestrator:
         self,
         claim: str,
         ground_truth: Optional[str] = None,
-        enable_xai: bool = True,
-        enable_rl: bool = True
     ) -> Dict[str, Any]:
         """
         Verify a factual claim end-to-end.
@@ -171,9 +160,7 @@ class FactCheckingOrchestrator:
             evidence_results = self.evidence_seeking.process(query_results)
             results['evidence'] = [
                 {
-                    'subclaim_id': er.subclaim_id,
                     'total_sources': er.total_sources,
-                    'high_credibility_count': er.high_credibility_count,
                     'evidence': [asdict(ev) for ev in er.evidence]
                 }
                 for er in evidence_results
@@ -183,33 +170,10 @@ class FactCheckingOrchestrator:
 
             # AGENT 4: Verdict Prediction
             logger.info("\n[4/6] Verdict Prediction Agent - Aggregating evidence...")
-            verdict_result = self.verdict_prediction.process(claim, evidence_results)
+            verdict_result = self.verdict_prediction.process(evidence_results)
             results['verdict'] = self.verdict_prediction.to_dict(verdict_result)
-            logger.info(f"✓ Verdict: {verdict_result.final_verdict} (confidence: {verdict_result.overall_confidence:.2f})")
-
-            # AGENT 5: Explainable AI (optional)
-            if enable_xai:
-                logger.info("\n[5/6] Explainable AI Agent - Generating explanations...")
-                xai_result = self.explainable_ai.process(verdict_result, evidence_results)
-                results['explanation'] = self.explainable_ai.to_dict(xai_result)
-                quality = xai_result.explanation_quality['overall']
-                logger.info(f"✓ Explanation quality: {quality:.2f}")
-            else:
-                logger.info("\n[5/6] Explainable AI Agent - Skipped")
-
-            # AGENT 6: Reinforcement Learning (optional)
-            if enable_rl:
-                logger.info("\n[6/6] Reinforcement Learning Agent - Recording performance...")
-                run_metrics = self.reinforcement_learning.record_run(
-                    claim,
-                    verdict_result,
-                    evidence_results,
-                    ground_truth
-                )
-                results['performance'] = asdict(run_metrics)
-                logger.info(f"✓ Run recorded (accuracy: {run_metrics.accuracy:.2f})")
-            else:
-                logger.info("\n[6/6] Reinforcement Learning Agent - Skipped")
+            results['verdict']['final_verdict'] = verdict_result.final_verdict
+            logger.info(f"✓ Verdict: {verdict_result.final_verdict})")
 
             logger.info("\n" + "="*80)
             logger.info("VERIFICATION COMPLETE")
@@ -261,8 +225,6 @@ class FactCheckingOrchestrator:
             result = self.verify_claim(
                 claim,
                 ground_truth=ground_truth,
-                enable_xai=enable_xai,
-                enable_rl=enable_rl
             )
             results.append(result)
 
