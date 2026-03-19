@@ -1,0 +1,37 @@
+### [hashtag](https://docs.langsearch.com/api/web-search-api#curl)cURL
+[hashtag](https://docs.langsearch.com/api/web-search-api#curl)
+
+### [hashtag](https://docs.langsearch.com/api/web-search-api#python)Python
+[hashtag](https://docs.langsearch.com/api/web-search-api#python)
+[PreviousLangSearch Rerankerchevron-left](https://docs.langsearch.com/product/langsearch-reranker)
+[NextSemantic Rerank APIchevron-right](https://docs.langsearch.com/api/semantic-rerank-api)
+Last updated 1 year ago
+- [1. API Overview](https://docs.langsearch.com/api/web-search-api#id-1.-api-overview)
+- [2. Search Results](https://docs.langsearch.com/api/web-search-api#id-2.-search-results)
+- [3. API Endpoint](https://docs.langsearch.com/api/web-search-api#id-3.-api-endpoint)
+- [4. Request Method](https://docs.langsearch.com/api/web-search-api#id-4.-request-method)
+- [5. Request Parameters](https://docs.langsearch.com/api/web-search-api#id-5.-request-parameters)
+- [6. Response Content](https://docs.langsearch.com/api/web-search-api#id-6.-response-content)
+- [7. Example Request](https://docs.langsearch.com/api/web-search-api#id-7.-example-request)
+- [8. SDKs](https://docs.langsearch.com/api/web-search-api#id-8.-sdks)
+- [cURL](https://docs.langsearch.com/api/web-search-api#curl)
+- [Python](https://docs.langsearch.com/api/web-search-api#python)
+[1. API Overview](https://docs.langsearch.com/api/web-search-api#id-1.-api-overview)
+[2. Search Results](https://docs.langsearch.com/api/web-search-api#id-2.-search-results)
+[3. API Endpoint](https://docs.langsearch.com/api/web-search-api#id-3.-api-endpoint)
+[4. Request Method](https://docs.langsearch.com/api/web-search-api#id-4.-request-method)
+[5. Request Parameters](https://docs.langsearch.com/api/web-search-api#id-5.-request-parameters)
+[6. Response Content](https://docs.langsearch.com/api/web-search-api#id-6.-response-content)
+[7. Example Request](https://docs.langsearch.com/api/web-search-api#id-7.-example-request)
+[8. SDKs](https://docs.langsearch.com/api/web-search-api#id-8.-sdks)
+[cURL](https://docs.langsearch.com/api/web-search-api#curl)
+[Python](https://docs.langsearch.com/api/web-search-api#python)
+
+```
+{ "query": "tell me the highlights from Apple's 2024 ESG report", "freshness": "onLimit", "summary": true, "count": 10 }
+```
+
+
+```
+{ "query": "tell me the highlights from Apple's 2024 ESG report", "freshness": "onLimit", "summary": true, "count": 10 }
+```

@@ -13,9 +13,11 @@ ollama>=0.3.0
 # LLM Providers (Paid - Optional)
 openai>=1.0.0
 google-generativeai>=0.8.0
+groq>=0.9.0
 
 # Web Search (Free - Primary)
 duckduckgo-search>=6.0.0
+langsearch>=0.1.0
 
 # Web Scraping
 requests>=2.31.0
