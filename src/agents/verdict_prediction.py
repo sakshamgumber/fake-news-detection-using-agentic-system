@@ -11,6 +11,7 @@ import json
 import sys
 sys.path.append('..')
 from src.utils.llm_interface import LLMInterface
+from kaggle_request import query_model_with_requests
 
 
 @dataclass
@@ -66,6 +67,11 @@ class VerdictPredictionAgent:
 
 
         logger.info("Verdict Prediction Agent initialized")
+
+    def _generate_ollama(self, messages: list) -> str:
+        """Delegate to LLMInterface._generate_ollama, extracting prompt from messages."""
+        prompt = messages[0]["content"] if messages else ""
+        return self.llm._generate_ollama(prompt=prompt)
 
     def process(
         self,
@@ -123,7 +129,8 @@ class VerdictPredictionAgent:
 
         # Generate verdict
         prompt = self.prompt_template.format(claim=original_claim, cell=cell)
-        response = self.llm._generate_groq(prompt,model="openai/gpt-oss-120b")
+        messages = [{"role": "user", "content": prompt}]
+        response = query_model_with_requests(messages)
         logger.debug(f"verdiction agent prompt is this : {response}")
 
             # Parse JSON

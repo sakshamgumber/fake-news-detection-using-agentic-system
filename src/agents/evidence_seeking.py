@@ -14,6 +14,8 @@ import os
 import sys
 import requests
 sys.path.append('..')
+from kaggle_request import query_model_with_requests
+from src.utils.search import langsearch_wikipedia, rerank_results
 from src.utils.web_scraper import WebScraper
 from src.utils.credibility_checker import CredibilityChecker
 
@@ -73,6 +75,11 @@ class EvidenceSeekingAgent:
         except Exception as e:
             logger.warning(f"Could not load agent_prompt.yaml: {e}")
 
+    def _generate_ollama(self, messages: list) -> str:
+        """Delegate to LLMInterface._generate_ollama, extracting prompt from messages."""
+        prompt = messages[0]["content"] if messages else ""
+        return self.llm._generate_ollama(prompt=prompt)
+
     def process(self, query_results: List[Any]) -> List[EvidenceResult]:
         """
         Retrieve evidence for all queries.
@@ -91,10 +98,10 @@ class EvidenceSeekingAgent:
             evidence_list = []
             for query in qr.queries:
                 # Stage 1: Search
-                search_results = self._search_web(query, "HoVER")
+                search_results = self._search_web(query)
 
                 # Stage 2 & 3: Check credibility and extract content
-                for url in search_results[:self.max_results]:
+                for url in search_results:
                     try:
 
                         # Content extraction
@@ -107,10 +114,10 @@ class EvidenceSeekingAgent:
                             query=query,
                             content=content_text
                         )
-                        extracted = self.llm._generate_groq(prompt=prompt)
+                        messages = [{"role": "user", "content": prompt}]
+                        extracted = query_model_with_requests(messages)
                         if extracted and "None" not in extracted:
                             passages = [extracted]
-
                         for passage in passages:
                             evidence = Evidence(
                                 source_url=url,
@@ -135,62 +142,35 @@ class EvidenceSeekingAgent:
 
         return results
 
-    def _search_web(self, query: str,dataset:str) -> List[str]:
+    def _search_web(self, query: str) -> List[str]:
         """
-        Search the web for a query.
+        Search the web using LangSearch Wikipedia + reranking.
 
         Args:
             query: Search query
+            dataset: Dataset identifier (unused for now, kept for future routing)
 
         Returns:
             List of URLs
         """
-        if dataset in ["HoVER", "FEVEROUS",""]:
-            # Use Wikipedia API to search specifically on Wikipedia
-            results = self._search_wikipedia(query)
-            logger.debug(f"wikipedia search results: {results}")
-            return results
-        
-        elif dataset == "SciFact-Open":
-            # Use Serper for Google Scholar and PubMed as requested
-            results = []
-            results.extend(self._search_serper(query, search_type="scholar"))
-            # For PubMed, we can use general search with site:pubmed.ncbi.nlm.nih.gov
-            results.extend(self._search_serper(f"{query} site:pubmed.ncbi.nlm.nih.gov"))
-            return results
-        
-        else:
-            # General search using Wikipedia
-            return self._search_wikipedia(query)
-
-    def _search_wikipedia(self, query: str) -> List[str]:
-        """Search using Wikipedia Free API"""
         try:
-            # Clean up the query if it contains site:wikipedia.org from earlier versions
             clean_query = query.replace(" site:wikipedia.org", "").strip()
-            
-            url = "https://en.wikipedia.org/w/api.php"
-            params = {
-                "action": "query",
-                "list": "search",
-                "srsearch": clean_query,
-                "format": "json",
-                "srlimit": 1
-            }
-            headers = {
-                'User-Agent': 'ResearchTool/1.0'
-            }
-            response = requests.get(url, params=params, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            
-            results = []
-            if "query" in data and "search" in data["query"]:
-                for item in data["query"]["search"]:
-                    title = item["title"].replace(" ", "_")
-                    results.append(f"https://en.wikipedia.org/wiki/{title}")
-                    
-            return results
+
+            # Step 1: Hybrid search on Wikipedia via LangSearch
+            data = langsearch_wikipedia(clean_query, num_results=5)
+            results = data.get("data", {}).get("webPages", {}).get("value", [])
+            results = [res for res in results if "wikipedia.org" in res.get("url", "")]
+
+            if not results:
+                return []
+
+            # Step 2: Rerank for best relevance
+            reranked = rerank_results(clean_query, results)
+
+            urls = [res.get("url") for res in reranked if res.get("url")]
+            logger.debug(f"Search results for '{query}': {urls}")
+            return urls
+
         except Exception as e:
             logger.error(f"Wikipedia search error: {e}")
             return []

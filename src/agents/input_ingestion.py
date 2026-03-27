@@ -57,6 +57,8 @@ class InputIngestionAgent:
         # Step 1: Decompose claim into subclaims
         subclaims = self.parser._decompose_with_llm(claim)
 
+        logger.debug(f'subclaims are {subclaims}')
+
         verifiable_subclaims = []
         filtered_subclaims = []
 

@@ -1,11 +1,9 @@
 from typing import Dict, Any, List
-from dataclasses import dataclass
-from enum import Enum
 from loguru import logger
 import yaml
 import json
 from pathlib import Path
-from src.utils.llm_interface import LLMInterface
+from kaggle_request import query_model_with_requests
 
 class FOLParser:
     """
@@ -25,6 +23,11 @@ class FOLParser:
         """
         self.llm = llm_interface
         self.prompts = self._load_prompts()
+
+    def _generate_ollama(self, messages: list) -> str:
+        """Delegate to LLMInterface._generate_ollama, extracting prompt from messages."""
+        prompt = messages[0]["content"] if messages else ""
+        return self.llm._generate_ollama(prompt=prompt)
 
     def _load_prompts(self) -> Dict[str, Any]:
         """Load prompts from YAML"""
@@ -46,8 +49,9 @@ class FOLParser:
         prompt = self.prompts.get('claim_decomposition', '').format(claim=claim)
 
         try:
-            response_text = self.llm._generate_groq(prompt=prompt)
-
+            messages = [{"role": "user", "content": prompt}]
+            response_text = query_model_with_requests(messages)
+            logger.debug(f'resposne text is{response_text}')
             # Parse JSON safely (handles empty, markdown-fenced, or malformed responses)
             logger.info(type(response_text))
             json_response=json.loads(response_text)
@@ -69,7 +73,8 @@ class FOLParser:
         """Classify a subclaim as VERIFIABLE or NON-VERIFIABLE"""
         prompt = self.prompts.get('subclaim_classification', '').format(claim=subclaim)
         try:
-            response_text = self.llm._generate_groq(prompt=prompt)
+            messages = [{"role": "user", "content": prompt}]
+            response_text = query_model_with_requests(messages)
             json_response = json.loads(response_text)
 
             return json_response

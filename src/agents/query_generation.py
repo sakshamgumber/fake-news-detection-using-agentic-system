@@ -11,6 +11,7 @@ import sys
 sys.path.append('..')
 import yaml
 from pathlib import Path
+from kaggle_request import query_model_with_requests
 
 
 @dataclass
@@ -49,6 +50,11 @@ class QueryGenerationAgent:
         self.prompts = self._load_prompts()
 
         logger.info(f"Query Generation Agent initialized (k={self.queries_per_subclaim})")
+
+    def _generate_ollama(self, messages: list) -> str:
+        """Delegate to LLMInterface._generate_ollama, extracting prompt from messages."""
+        prompt = messages[0]["content"] if messages else ""
+        return self.llm._generate_ollama(prompt=prompt)
 
     def _load_prompts(self) -> Dict[str, Any]:
         """Load prompts from YAML"""
@@ -107,10 +113,8 @@ class QueryGenerationAgent:
         """
         prompt_template = self.prompts.get('query_generation', '')
         system_prompt = prompt_template.format(k=k, subclaim=subclaim)
-        response = self.llm._generate_groq(
-            role="user",
-            prompt=system_prompt,
-        )
+        messages = [{"role": "user", "content": system_prompt}]
+        response = query_model_with_requests(messages)
         logger.info(f"LLM response for query generation: {response}")
 
         # Robust JSON extraction with fallback

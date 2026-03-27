@@ -182,7 +182,7 @@ class FactCheckingOrchestrator:
             return results
 
         except Exception as e:
-            logger.error(f"Error during verification: {e}", exc_info=True)
+            logger.opt(exception=True).error("Error during verification: " + str(e))
             results['error'] = str(e)
             return results
 

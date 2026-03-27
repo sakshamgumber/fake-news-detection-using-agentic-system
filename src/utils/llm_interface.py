@@ -131,6 +131,7 @@ class LLMInterface:
 
         # Always setup Ollama, Gemini, and Groq since agents use them directly
         self._setup_ollama()
+        self._setup_openai()
         self._setup_gemini()
         self._setup_groq()
 
@@ -144,7 +145,7 @@ class LLMInterface:
                 base_url = f"{base_url.rstrip('/')}/v1"
                 
             self.ollama_client = OpenAI(
-                base_url=base_url,
+                base_url="https://salvatore-selectable-overcleanly.ngrok-free.dev/v1",
                 api_key="ollama",  # API key is required by the client but unused by local Ollama
             )
             logger.info("Ollama client initialized successfully via OpenAI API")
@@ -198,7 +199,7 @@ class LLMInterface:
             if api_key:
                 self.gemini_client = OpenAI(
                     api_key=api_key,
-                    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+                    base_url="https://salvatore-selectable-overcleanly.ngrok-free.dev/",
                 )
                 logger.info("Gemini client initialized successfully")
             else:
@@ -208,52 +209,27 @@ class LLMInterface:
         except Exception as e:
             logger.error(f"Failed to initialize Gemini: {e}")
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def generate(
-        self,
-        prompt: str,
-        temperature: Optional[float] = None,
-        max_tokens: Optional[int] = None,
-        provider: Optional[LLMProvider] = None
-    ) -> str:
-        """
-        Generate text using configured LLM with automatic fallback.
-
-        Args:
-            prompt: User prompt/query
-            temperature: Sampling temperature (0-1)
-            max_tokens: Maximum tokens to generate
-            provider: Force specific provider (None = auto)
-
-        Returns:
-            Generated text response
-
-        Raises:
-            Exception if all providers fail
-        """
+    def generate(self, prompt: str, max_tokens: Optional[int] = None) -> str:
+        """Generate text using configured providers with fallback."""
         llm_config = self.config.get('llm', {})
-
-        # Determine provider order
-        if provider:
-            providers = [provider.value]
-        else:
-            providers = [llm_config.get('primary_provider', 'ollama')]
-            fallback = llm_config.get('fallback_provider')
-            if fallback:
-                providers.append(fallback)
+        primary = llm_config.get('primary_provider', 'ollama')
+        fallback = llm_config.get('fallback_provider')
+        providers = [primary]
+        if fallback:
+            providers.append(fallback)
 
         # Try each provider in order
         last_error = None
         for prov_name in providers:
             try:
                 if prov_name == 'ollama' and self.ollama_client:
-                    return self._generate_ollama(prompt, max_tokens)
+                    return self._generate_ollama(prompt, max_tokens=max_tokens)
                 elif prov_name == 'openai' and self.openai_client:
-                    return self._generate_openai(prompt, max_tokens)
+                    return self._generate_openai(prompt, max_tokens=max_tokens)
                 elif prov_name == 'groq' and self.groq_client:
-                    return self._generate_groq(prompt, max_tokens)
+                    return self._generate_groq(prompt, max_tokens=max_tokens)
                 elif prov_name == 'gemini' and self.gemini_client:
-                    return self._generate_gemini(prompt, max_tokens)
+                    return self._generate_gemini(prompt, max_tokens=max_tokens)
             except Exception as e:
                 logger.warning(f"{prov_name} generation failed: {e}")
                 last_error = e
@@ -261,6 +237,7 @@ class LLMInterface:
 
         # All providers failed
         raise Exception(f"All LLM providers failed. Last error: {last_error}")
+
 
     def _generate_ollama(
         self,
@@ -271,16 +248,17 @@ class LLMInterface:
         role: str = 'user'
     ) -> str:
         """Generate text using Ollama via OpenAI API"""
-        ollama_config = self.config['llm']['ollama']
+        ollama_config = self.config.get('llm', {}).get('ollama', {})
 
         messages = [{'role': role, 'content': prompt}]
-
+        logger.debug(f"messages are {messages}")
         response = self.ollama_client.chat.completions.create(
-            model=model or ollama_config.get('model', 'llama3.2:3b'),
+            model='Qwen-2.5-3B',
             messages=messages,
             temperature=temperature or ollama_config.get('temperature', 0.3),
             max_tokens=max_tokens or ollama_config.get('max_tokens', 2048)
         )
+        logger.debug(f"response is {response}")
         return response.choices[0].message.content
 
     def _generate_openai(
@@ -292,7 +270,7 @@ class LLMInterface:
         role: str = 'user'
     ) -> str:
         """Generate text using OpenAI"""
-        openai_config = self.config['llm']['openai']
+        openai_config = self.config.get('llm', {}).get('openai', {})
 
         messages = [{'role': role, 'content': prompt}]
 
@@ -314,7 +292,7 @@ class LLMInterface:
         role: str = 'user'
     ) -> str:
         """Generate text using Groq"""
-        groq_config = self.config['llm']['groq']
+        groq_config = self.config.get('llm', {}).get('groq', {})
 
         messages = [{'role': role, 'content': prompt}]
 
@@ -336,7 +314,7 @@ class LLMInterface:
         role: str = 'user'
     ) -> str:
         """Generate text using Google Gemini via OpenAI API"""
-        gemini_config = self.config['llm'].get('gemini', {})
+        gemini_config = self.config.get('llm', {}).get('gemini', {})
 
         messages = [{'role': role, 'content': prompt}]
 

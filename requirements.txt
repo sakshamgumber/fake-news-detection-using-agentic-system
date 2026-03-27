@@ -17,7 +17,7 @@ groq>=0.9.0
 
 # Web Search (Free - Primary)
 duckduckgo-search>=6.0.0
-langsearch>=0.1.0
+# langsearch removed - conflicts with langchain>=0.3.0 (langsearch pins langchain==0.0.101)
 
 # Web Scraping
 requests>=2.31.0

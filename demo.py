@@ -24,7 +24,7 @@ logger.add("demo_log.txt", format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {m
 
 def load_mock_dataset():
     """Load mock benchmark dataset"""
-    dataset_path = Path("data/benchmarks/mock_dataset.json")
+    dataset_path = Path("data/benchmarks/hover-testing-data.json")
 
     if not dataset_path.exists():
         logger.error(f"Dataset not found at {dataset_path}")
